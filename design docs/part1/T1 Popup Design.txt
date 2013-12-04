@@ -1,0 +1,109 @@
+Agent: Popup
+	Data
+		Conveyor conveyor;
+		Sensor pre;
+		Sensor post;
+		Glass glass = null;
+		
+		boolean wantToPutGlassOn = false;
+		boolean requestUp = false;
+		boolean requestDown = false;
+		boolean isUp = false;
+		boolean ready = false;
+		boolean newGlass = false;
+		boolean convReady = false;
+	
+	Messages
+		msgGoUp() {							// from conveyor
+			requestUp = true;
+			stateChanged();
+		}
+		msgGoDown() {						// from conveyor
+			requestDown = true;
+			stateChanged();
+		}
+		msgIsPopupReady() {					// from conveyor
+			wantToPutGlassOn = true;
+			stateChanged();
+		}
+		msgYouAreReady() {					// from pre
+			ready = true;
+			stateChanged();
+		}
+		msgHereIsPretreatedGlass(Glass g) {	// from conveyor
+			glass = g;
+			newGlass = true;
+			stateChanged();
+		}
+		msgConvIsReady() {					// from post
+			convReady = true;
+			stateChanged();
+		}
+	
+	Scheduler
+		if (requestUp && !up) {
+			goUp();
+			return true;
+		}
+		if (requestDown && up) {
+			goDown();
+			return true;
+		}
+		if (convReady && !up) {
+			removeGlass();
+			return true;
+		}
+		if (wantToPutGlassOn) {
+			if (!ready) {
+				checkReady();
+				return true;
+			}
+			if (!up && ready) {
+				informReady();
+				wantToPutGlassOn = false;
+				return true;
+			}
+		}
+		if (newGlass) {
+			treatGlass();
+			newGlass = false;
+			return true;
+		}
+	
+	Actions
+		goUp() {
+			popupGUI.goUp();
+			up = true;
+			stateChanged();
+		}
+		goDown() {
+			popupGUI.goDown();
+			up = false;
+			stateChanged();
+		}
+		checkReady() {
+			pre.msgAmIReady();
+			stateChanged();
+		}
+		informReady() {
+			conveyor.msgIAmReady();
+			stateChanged();
+		}
+		treatGlass() {
+			pre.msgIHaveGlass();
+			popupGUI.treatGlass();
+			//Start a timer to treat glass
+			// when timer ends:
+			post.msgIsConvReady();
+			stateChanged();
+		}
+		removeGlass() {
+			conveyor.msgHereIsTreatedGlass(Glass g);
+			post.msgDownWithGlass();
+			glass = null;	
+		}
+		
+	Helper
+		isEmpty() {
+			return (glass == null);
+		}

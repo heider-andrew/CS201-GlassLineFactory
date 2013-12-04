@@ -1,0 +1,151 @@
+Agent: Conveyor
+	Data
+		Robot previous;
+		Conveyor next;
+		
+		Sensor entry;
+		Sensor exit;
+		
+		Popup popup;
+		boolean popupUp;
+		
+		boolean startRequested;
+		boolean stopRequested;
+		boolean moving;
+		boolean newGlassRequested = false;
+		boolean acceptNewGlass = false;
+		boolean newGlass = false;
+		boolean popupReady = false;
+		boolean startDoneProcess = false;
+		boolean clear;
+		boolean nextReady;
+		
+		List<Glass> pieces;
+			
+	Messages
+		msgStartConveyor() {
+			startRequested = true;
+			stateChanged();
+		}
+		
+		msgStopConveyor() {
+			stopRequested = true;
+			stateChanged();
+		}
+		
+		msgAreYouReady() {					// from previous conveyor
+			newGlassRequested = true;
+			stateChanged();
+		}
+		msgYouAreReady() {					// from entry sensor
+			acceptNewGlass = true;
+			stateChanged();
+		}
+		msgHereIsGlass(Glass g) {			// from previous conveyor
+			pieces.add(g);
+			newGlass = true;
+			stateChanged();
+		}
+		msgIAmReady() {						// from pop-up
+			popupReady = true;
+			stateChanged();
+		}
+		msgHereIsTreatedGlass(Glass g) {	// from pop-up
+			startDoneProcess = true;
+			stateChanged();
+		}
+		msgClear() {						// from exit sensor
+			clear = true;
+			stateChanged();
+		}
+		msgIAmReadyForNewGlass() {			// from next conveyor
+			nextReady = true;
+			stateChanged();
+		}
+	
+	Scheduler
+		if (stopRequested) {
+			moving = false;
+			return true;
+		}
+		if (startRequested) {
+			moving = true;
+			return true;
+		}
+		if (newGlassRequested) {
+			checkIfReady();
+			newGlassRequested = false;
+			return true;
+		}
+		if (acceptNewGlass) {
+			informReady();
+			acceptNewGlass = false;
+			return true;
+		}
+		if (newGlass) {
+			informNewGlass();
+			newGlass = false;
+			return true;
+		}
+		
+		if (!pieces.empty()) {
+			if (!pieces.get(0).popupIsNecessary)
+				bypass();
+			else
+				startProcess();
+			return true;
+		}
+		
+		if (popupReady) {
+			giveGlassToPopup();
+			return true;
+		}
+		
+		if (startDoneProcess) {
+			startDone();
+		}
+		
+		if (clear && nextReady) {
+			doneWithGlass();
+		}
+		
+	
+	Actions
+		checkIfReady() {
+			entry.msgAmIReady();
+		}
+		
+		informReady() {
+			previous.msgIAmReadyForNewGlass();
+		}
+		
+		informNewGlass() {
+			entry.msgIHaveGlass();
+		}
+		
+		bypass() {
+			if (popup.isEmpty()) {
+				startDoneProcess = true;
+				stateChanged();
+			}
+		}
+		
+		startProcess() {
+			stopRequested();
+			entry.msgIsPopupReady();
+		}
+		
+		giveGlassToPopup() {
+			popup.msgHereIsPreTreatedGlass(pieces.get(0));
+		}
+		
+		startDone() {
+			exit.msgGlassReadyToLeave();
+			next.msgAreYouReady();
+		}
+		
+		doneWithGlass() {
+			Glass g = pieces.pop(0);
+			next.msgHereIsGlass(g);
+			exit.msgDoneWithGlass();
+		}

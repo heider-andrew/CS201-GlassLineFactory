@@ -1,0 +1,94 @@
+SECTION 1 - Robot ===========================================================
+//DATA===============================================================
+//list to hold all the glasses across the factory
+List<Glass> glassQueue = new List<Glass>();
+myConveor loadIn;
+Glass glassInHand;
+
+private class myConveyor{
+	Conveyor c;
+	ConveyorStatus s;
+	//constructor
+	private myConveyor(Conveyor c){
+		this.c = c;
+		s = NOTREADY;
+	}
+}
+
+public enum ConveyorStatus{
+	READY, NOTREADY}
+
+//glass class
+public class Glass{
+	GlassType type;
+	GlassStatus status;
+	//constructor
+	public Glass(GlassType type){
+		this.type = type;
+		status = Ordered;
+	}
+}
+
+//glass status enum
+public enum GlassStatus{
+	Ordered, Loading, Loaded, MovingToPosition, InPosition, InProduction, Completed}
+
+//glass type enum
+public enum GlassType{
+	Type1, Type2, Type3, Type4
+};
+
+//MESSAGES===========================================================
+
+msgScheduleNewGlass(GlassType t){
+	Glass newOrder = new Glass(t);
+	glassQueue.add(newOrder);
+}
+
+msgInPosition(){
+	glassInHand.s = inPosition;
+}
+	
+msgPickedUp()
+	glassInHand.s = loaded;
+}
+
+msgIAmReady(){
+	loadIn.s = READY;
+}
+
+//SCHEDULER==========================================================
+
+if there exists Glass in glassQueue such that Glass.status == inPosition && loadIn.s == ready
+	loadUpGlass(Glass);
+	return true;
+if there exists Glass in glassQueue such that Glass.status == loaded && loadIn.s == ready
+ 	getGlassToPosition(Glass);
+ 	return true;
+if there exists Glass in glassQueue such that Glass.status == ordered && glassInHand == null	
+	prepGlass(Glass);
+	return true;
+else
+	return false;
+	
+
+//ACTIONS=============================================================
+public void prepGlass(Glass){
+	glassInHand = Glass;
+	transducer.fireEvent(channel.GUI, TEvent.Get_Glass, args);
+	glassInHand.s = loading;
+	myConveyor.Conveyor.msgAreYouReady();
+}
+
+public void getGlassToPosition(Glass){
+	transducer.fireEvent(channel.GUI, TEvent.Position_Glass, args);
+	glassInHand.s = MovingToPosition;
+}
+
+public void loadUpGlass(Glass){
+	transducer.fireEvent(channel.GUI, TEvent.Load_Glass, args);
+	loadIn.Conveyor.msgHereIsGlass(Glass);
+	loadIn.s == notReady;
+	glassInHand.s = InProduction;
+	glassInHand = null;
+}

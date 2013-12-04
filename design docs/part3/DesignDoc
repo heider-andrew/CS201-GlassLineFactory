@@ -1,0 +1,123 @@
+SECTION 3 ===========================================================
+SHUTTLE AGENT
+//DATA===============================================================
+public enum Event{
+	RECEIVING,
+	TUURNING,
+	SENDING,
+	TURNING_BACK,
+	NO_ACTION
+	}
+//list to hold all the events, like in the customer agent
+List<Event> events = Collections.synchronizedList(new ArrayList<Event>());
+//status that lets shuttle identify whether it’s free (no glass on it) or busy (currently processing glass)
+public enum Status{
+	FREE,
+	BUSY
+}
+//the initial state of the status
+public Status status = Status.FREE;
+//list to hold all the glasses across the factory
+List<Glass> glassQueue = new List<Glass>();
+//glass class
+public class Glass{
+	String type;
+	int amount;
+	//constructor
+	public Glass(String t, int amt){
+		this.type = t;
+		this.amount = amt;
+	}
+}
+
+//MESSAGES===========================================================
+//message sent from sensor1 to shuttle letting it know that it has glass that needs to be
+//transported
+msgIHaveGlass(Glass glass){
+	events.add(Event.RECEIVING);
+	glassQueue.add(glass);
+	stateChanged();
+}
+//message sent from shuttle to sensor1 letting it know it's ready to take the glass
+msgSensorIAmReadyForGlass(Glass glass){
+	events.add(Event.RECEIVING);
+	status = Status.BUSY;
+	stateChanged();
+}
+//message sent from shuttle to sensor2 letting it know it's ready to send glass forward
+msgSensorIHaveGlass(Glass glass){
+	events.add(Event.SENDING);
+	stateChanged();
+}
+//message sent from sensor2 to shuttle letting it know it's ready to receive glass
+msgSendGlass(Glass glass){
+	events.add(Event.TURNING_BACK);
+	stateChanged();
+}
+//message the agent sends to itself to get it to turn back to its original position
+msgTurnBack(){
+	events.add(Event.NO_ACTION);
+	stateChanged();
+}
+
+//SCHEDULER==========================================================
+AgentEvent event = events.remove(0); //pop first element
+//if the status is free and the event is receiving, the ReceiveGlass() is called
+if(status==FREE){
+	if(event == RECEIVING){
+		ReceiveGlass();
+		state = Status.BUSY;
+		return true;
+	}
+}
+//if status is busy and event is turning then TurnGlass()
+if(status == BUSY){
+	if(event == TURNING){
+		TurnGlass();
+		return true;
+	}
+//if status is busy and event is sending then SendGlass()
+	if(event == SENDING){
+		SendGlass();
+		return true;
+	}
+	//if status is busy and event is turning back then TurnBack()
+	if(event == TURNING_BACK){
+		TurnBack();
+		state = Status.FREE;
+		return true;
+	}
+}
+
+//ACTIONS=============================================================
+//this mesage allows for the transducer to do the animation needed in order to get the factory working, allows for the sensor to receive the message with the glass parameter and the state top get changed
+public void ReceiveGlass(){
+	transducer.fireEvent(channel.GUI, TEvent.START_ANIMATION, args);
+	sensor1.msgReadyForGlass(glassQueue.get());
+	stateChanged();
+}
+//this action allows for the glass to be turned around so it can proceed on going forward and animation to start turning
+public void TurnGlass(){
+	transducer.fireEvent(channel.GUI, TEvent.START_TURNING, args);
+	stateChanged();
+}
+//this action allows for the animation to fire, the sensor to receive the message and the parameter to send glass and the state to be changed
+public void SendGlass(){
+	transducer.fireEvent(channel.GUI, TEvent.START_SENDING, args);
+	sensor2.msgSendGlass(glassQueue.get());
+	stateChanged();
+}
+//this is an action to make sure that shuttle goes back to its original position
+public void TurnBack(){
+	transducer.fireEvent(channel.GUI, TEvent.START_TURNING_BACK, args);
+	glassQueue.remove();
+	stateChanged();
+}
+
+//EXTRAS==============================================================
+public int getAmount(){
+	return amount;
+}
+public String getType(){
+	return type;
+}

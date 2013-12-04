@@ -1,0 +1,20 @@
+V0 - Part1 Readme:
+
+To Run:
+Main is contained in the "Driver" class found in the driver package.
+To run, press the play button to prep the factory, then click the "add glass" button to start a new glass order.
+Trace panel will display only the messages from the checked elements, however unchecking an element will not remove already printed messages.
+Successive glass orders can be completed (please note bug in successive orders).
+
+A completed glass is noted by the following series of messages:
+NCCutConveyor: Done with glass
+NCCutConveyorExit: Received msgDoneWithGlass
+NCCutter: Going down
+GUI EVENT: Popup going down
+
+Known Bug:
+If the "add glass" button is pressed again before the currently processing glass is complete, the system will sometimes glich with message spam, and not complete any glass beyond the current one.
+A fix is in progress, but please prevent this by waiting until glass complete message is seen before ordering more glass, or be ordering glass at your own risk.
+
+Unit Tests:
+All unit tests can be found in the glassline.test package
